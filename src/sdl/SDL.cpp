@@ -78,6 +78,12 @@
 #include <lirc/lirc_client.h>
 #endif
 
+#ifdef USE_LUACTRL
+extern void luaMain();
+extern void luaSignal(int,int);
+extern void luaOutput(const char *, u32);
+#endif
+
 extern void remoteInit();
 extern void remoteCleanUp();
 extern void remoteStubMain();
@@ -1786,6 +1792,11 @@ Options:\n\
   -T, --throttle=THROTTLE      Set the desired throttle (5...1000)\n\
   -b, --bios=BIOS              Use given bios file\n\
   -c, --config=FILE            Read the given configuration file\n\
+"
+#ifdef USE_LUACTRL
+"  -l,                          Enter lua-based debugger\n"
+#endif
+"\
   -d, --debug                  Enter debugger\n\
   -f, --filter=FILTER          Select filter:\n\
 ");
@@ -1914,7 +1925,7 @@ int main(int argc, char **argv)
 
   while((op = getopt_long(argc,
                           argv,
-                           "FNO:T:Y:G:I:D:b:c:df:hi:p::s:t:v:",
+                           "FNO:T:Y:G:I:D:b:c:df:hi:lp::s:t:v:",
                           sdlOptions,
                           NULL)) != -1) {
     switch(op) {
@@ -1982,6 +1993,13 @@ int main(int argc, char **argv)
         sdl_patch_num++;
       }
       break;
+#ifdef USE_LUACTRL
+   case 'l':
+      dbgMain = luaMain;
+      dbgSignal = luaSignal;
+      dbgOutput = luaOutput;
+      break;
+#endif
    case 'G':
       dbgMain = remoteStubMain;
       dbgSignal = remoteStubSignal;

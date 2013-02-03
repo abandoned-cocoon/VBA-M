@@ -12,6 +12,7 @@ option( ENABLE_SDL "Build the SDL port" ON )
 option( ENABLE_GTK "Build the GTK+ GUI" ON )
 option( ENABLE_WX "Build the wxWidgets port" OFF )
 option( ENABLE_DEBUGGER "Enable the debugger" ON )
+option( ENABLE_LUACTRL "Enable the lua-interface" ON )
 option( ENABLE_NLS "Enable translations" ON )
 option( ENABLE_ASM_CORE "Enable x86 ASM CPU cores" OFF )
 option( ENABLE_ASM_SCALERS "Enable x86 ASM graphic filters" OFF )
@@ -357,6 +358,13 @@ if( ENABLE_DEBUGGER )
     )
 endif( ENABLE_DEBUGGER )
 
+if( ENABLE_LUACTRL )
+    SET(SRC_LUACTRL
+        src/gba/luactrl.cpp
+    )
+    ADD_DEFINITIONS( -D USE_LUACTRL )
+endif( ENABLE_LUACTRL )
+
 INCLUDE_DIRECTORIES(
     ${ZLIB_INCLUDE_DIR}
     fex
@@ -401,6 +409,7 @@ ADD_LIBRARY (
     ${SRC_APU}
     ${SRC_FILTERS}
     ${SRC_DEBUGGER}
+    ${SRC_LUACTRL}
 )
 
 IF( ENABLE_SDL )
