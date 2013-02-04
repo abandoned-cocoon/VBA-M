@@ -12,7 +12,7 @@ option( ENABLE_SDL "Build the SDL port" ON )
 option( ENABLE_GTK "Build the GTK+ GUI" ON )
 option( ENABLE_WX "Build the wxWidgets port" OFF )
 option( ENABLE_DEBUGGER "Enable the debugger" ON )
-option( ENABLE_LUACTRL "Enable the lua-interface" ON )
+option( ENABLE_LUACTRL "Enable the lua-interface" OFF )
 option( ENABLE_NLS "Enable translations" ON )
 option( ENABLE_ASM_CORE "Enable x86 ASM CPU cores" OFF )
 option( ENABLE_ASM_SCALERS "Enable x86 ASM graphic filters" OFF )
@@ -362,7 +362,6 @@ if( ENABLE_LUACTRL )
     SET(SRC_LUACTRL
         src/gba/luactrl.cpp
     )
-    ADD_DEFINITIONS( -D USE_LUACTRL )
 endif( ENABLE_LUACTRL )
 
 INCLUDE_DIRECTORIES(
@@ -479,3 +478,27 @@ if( ENABLE_GTK OR ENABLE_WX )
         add_subdirectory(po)
     endif( ENABLE_NLS )
 endif( ENABLE_GTK OR ENABLE_WX )
+
+if( ENABLE_LUACTRL )
+
+    # TODO: Link statically
+
+    FIND_PACKAGE ( PkgConfig REQUIRED )
+    PKG_CHECK_MODULES ( LUA51 REQUIRED lua5.1 )
+
+    INCLUDE_DIRECTORIES(
+        ${LUA51_INCLUDE_DIRS}
+    )
+
+    LINK_DIRECTORIES(
+        ${LUA51_LIBRARY_DIRS}
+    )
+
+    TARGET_LINK_LIBRARIES (
+        vbam
+        ${LUA51_LIBRARIES}
+    )
+
+    ADD_DEFINITIONS( -DUSE_LUACTRL )
+
+endif( ENABLE_LUACTRL )
