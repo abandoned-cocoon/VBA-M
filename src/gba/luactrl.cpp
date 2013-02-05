@@ -1,32 +1,18 @@
 #include <cstdio>
 
-extern "C" {
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
-}
 
 #include "../gba/GBA.h"
 #include "../gba/Sound.h"
 #include "../common/Port.h"
 
-#define debuggerReadMemory(addr) \
-  (*(u32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask])
-
-#define debuggerReadHalfWord(addr) \
-  (*(u16*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask])
-
-#define debuggerReadByte(addr) \
-  map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]
-
-#define debuggerWriteMemory(addr, value) \
-  *(u32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask] = (value)
-
-#define debuggerWriteHalfWord(addr, value) \
-  *(u16*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask] = (value)
-
-#define debuggerWriteByte(addr, value) \
-  map[(addr)>>24].address[(addr) & map[(addr)>>24].mask] = (value)
+template <class T>
+T& memory (u32 addr) {
+    memoryMap& m = map[addr >> 24];
+    return *(T*)&m.address[addr & m.mask];
+};
 
 extern bool debugger;
 extern struct EmulatedSystem emulator;
@@ -110,23 +96,79 @@ static int dofile (lua_State *L, const char *name) {
   return report(L, status);
 }
 
-int readreg(lua_State *L) {
-    unsigned int argc = lua_gettop(L);
-    if (lua_isnumber(L, 1)) {
-        unsigned int r = lua_tonumber(L, 1);
-        if (0 <= r && r < 16) {
+int regaccess(lua_State *L) {
+    unsigned int argc = lua_gettop(L), r;
+
+    if (argc == 0) {
+        lua_pushstring(L, "reg(n, [value]): needs at least one argument");
+
+    } else if (!lua_isnumber(L, 1) || (r = lua_tonumber(L, 1)) >= 16) {
+        lua_pushstring(L, "reg(x): x has to be a number between 0 and 15");
+
+    } else if (argc == 2 && !lua_isnumber(L, 2)) {
+        lua_pushstring(L, "reg(x, value): value has to be a number");
+
+    } else if (argc > 2) {
+        lua_pushstring(L, "reg(n, [value]): too many arguments");
+
+    } else {
+        if (argc == 1) {
             lua_pushnumber(L, reg[r].I);
             return 1;
-        }
+
+        } else if (argc == 2) {
+            reg[r].I = lua_tonumber(L, 2);
+            return 0;
+
+        }   
     }
-    lua_pushstring(L, "readreg(x): x has to be a number between 0 and 15");
-    lua_error(L);
+    return lua_error(L);
+
+}
+
+template <class T, int width>
+int memaccess(lua_State *L) {
+    unsigned int argc = lua_gettop(L);
+
+    if (argc == 0) {
+        lua_pushstring(L, "mem(n, [value]): needs at least one argument");
+
+    } else if (!lua_isnumber(L, 1)) {
+        lua_pushstring(L, "mem(x): x has to be a number");
+
+    } else if (argc == 2 && !lua_isnumber(L, 2)) {
+        lua_pushstring(L, "mem(x, value): value has to be a number");
+
+    } else if (argc > 2) {
+        lua_pushstring(L, "mem(n, [value]): too many arguments");
+
+    } else {
+        unsigned int loc = lua_tonumber(L, 1);
+
+        if (argc == 1) {
+            lua_pushnumber(L, memory<T>(loc));
+            return 1;
+
+        } else if (argc == 2) {
+            memory<T>(loc) = lua_tonumber(L, 2);
+            return 0;
+
+        }   
+    }
+    return lua_error(L);
+
 }
 
 void push_cpu_object(lua_State *L) {
+    #define addfunction(name, func) \
+        lua_pushcfunction(L, func); \
+        lua_setfield(L, -2, name);
+
     lua_createtable(L, 0, 2);
-    lua_pushcfunction(L, readreg);
-    lua_setfield(L, -2, "readreg");
+    addfunction("reg",   &(regaccess));
+    addfunction("mem32", &(memaccess<u32, 32>));
+    addfunction("mem16", &(memaccess<u16, 16>));
+    addfunction("mem8",  &(memaccess<u8, 8>));
 }
 
 void luaMain() {
@@ -148,8 +190,12 @@ void luaMain() {
     push_cpu_object(L);
     lua_setglobal(L, "cpu");
 
-    printf("\nTry 'cpu.readreg(0);'. Ctrl+D to resume emulation.\n");
-    luaL_dostring(L, "package.path = \"./src/lua-repl/?.lua;./src/lua-repl/?/init.lua;\" .. package.path");
+    printf("\nTry 'cpu.reg(15)' and 'cpu.mem16(0x08000000)'. Pass a second argument to assign. Ctrl+D to resume emulation.\n");
+    #define PATH_PREPEND(n, p) n"=\""p";\".."n";"
+    luaL_dostring(L,
+        PATH_PREPEND("package.path", "./src/lua-repl/?.lua;./src/lua-repl/?/init.lua")
+        PATH_PREPEND("package.cpath", "./src/lua-repl/?.so")
+    );
     dofile(L, "src/lua-repl/rep.lua");
     lua_close(L);
 }
@@ -178,7 +224,7 @@ void luaSignal(int sig, int number) {
 void luaOutput(const char *s, u32 addr) {
     char c;
     if (s) puts(s);
-    if (addr) while(c = debuggerReadByte(addr++))
+    if (addr) while((c = memory<u32>(addr++)))
         putchar(c);
     puts("");
 }
