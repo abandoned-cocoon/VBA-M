@@ -126,7 +126,7 @@ int regaccess(lua_State *L) {
 
 }
 
-template <class T, int width>
+template <class T>
 int memaccess(lua_State *L) {
     unsigned int argc = lua_gettop(L);
 
@@ -166,9 +166,9 @@ void push_cpu_object(lua_State *L) {
 
     lua_createtable(L, 0, 2);
     addfunction("reg",   &(regaccess));
-    addfunction("mem32", &(memaccess<u32, 32>));
-    addfunction("mem16", &(memaccess<u16, 16>));
-    addfunction("mem8",  &(memaccess<u8, 8>));
+    addfunction("mem32", &(memaccess<u32>));
+    addfunction("mem16", &(memaccess<u16>));
+    addfunction("mem8",  &(memaccess<u8>));
 }
 
 void luaMain() {
