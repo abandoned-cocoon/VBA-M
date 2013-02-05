@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstring>
 
 #include "lua.h"
 #include "lualib.h"
@@ -159,6 +160,44 @@ int memaccess(lua_State *L) {
 
 }
 
+struct DebuggerCommand {
+  const char *name;
+  void (*function)(int,char **);
+  const char *help;
+  const char *syntax;
+};
+
+extern DebuggerCommand debuggerCommands[];
+
+int oldapi(lua_State *L) {
+    unsigned int argc = lua_gettop(L);
+
+    if (argc == 0) {
+        lua_pushstring(L, "oldapi(name, ...): needs at least one argument");
+        return lua_error(L);
+    }
+
+    const char *first = lua_tostring(L, 1);
+    char **args = new char*[argc];
+
+    int i;
+    for (i=0; i<argc; i++) {
+        args[i] = (char*) lua_tostring(L, i+1);
+    }
+
+
+    for (i=0; ; i++) {
+        if (!debuggerCommands[i].name) {
+            lua_pushstring(L, "legacy command not found");
+            return lua_error(L);
+        }
+        if (strcmp(debuggerCommands[i].name, first) == 0) break;
+    }
+
+    debuggerCommands[i].function(argc, args);
+    delete[] args;
+}
+
 void push_cpu_object(lua_State *L) {
     #define addfunction(name, func) \
         lua_pushcfunction(L, func); \
@@ -189,6 +228,9 @@ void luaMain() {
 
     push_cpu_object(L);
     lua_setglobal(L, "cpu");
+
+    lua_pushcfunction(L, &oldapi);
+    lua_setglobal(L, "oldapi");
 
     printf("\nTry 'cpu.reg(15)' and 'cpu.mem16(0x08000000)'. Pass a second argument to assign. Ctrl+D to resume emulation.\n");
     #define PATH_PREPEND(n, p) n"=\""p";\".."n";"
@@ -224,8 +266,27 @@ void luaSignal(int sig, int number) {
 void luaOutput(const char *s, u32 addr) {
     char c;
     if (s) puts(s);
-    if (addr) while((c = memory<u32>(addr++)))
+    if (addr) while((c = memory<u8>(addr++)))
         putchar(c);
     puts("");
+}
+
+/*extern*/ void debuggerBreakOnWrite(u32 address, u32 oldvalue, u32 value,
+                                     int size, int t)
+{
+  const char *type = "write";
+  if(t == 2)
+    type = "change";
+
+  if(size == 2)
+    printf("Breakpoint (on %s) address %08x old:%08x new:%08x\n",
+           type, address, oldvalue, value);
+  else if(size == 1)
+    printf("Breakpoint (on %s) address %08x old:%04x new:%04x\n",
+           type, address, (u16)oldvalue,(u16)value);
+  else
+    printf("Breakpoint (on %s) address %08x old:%02x new:%02x\n",
+           type, address, (u8)oldvalue, (u8)value);
+  debugger = true;
 }
 

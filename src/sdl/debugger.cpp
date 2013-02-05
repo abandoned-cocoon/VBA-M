@@ -138,7 +138,7 @@ static bool debuggerCondEvaluate(int num);
 static void debuggerCondBreakThumb(int, char **);
 static void debuggerCondBreakArm(int, char **);
 
-static DebuggerCommand debuggerCommands[] = {
+DebuggerCommand debuggerCommands[] = {
   { "?", debuggerHelp,        "Show this help information. Type ? <command> for command help", "[<command>]" },
   { "ba", debuggerBreakArm,   "Add an ARM breakpoint", "<address>" },
   { "bd", debuggerBreakDelete,"Delete a breakpoint", "<number>" },
@@ -1058,6 +1058,7 @@ static void debuggerBreakArm(int n, char **args)
     debuggerUsage("ba");
 }
 
+#ifndef USE_LUACTRL
 /*extern*/ void debuggerBreakOnWrite(u32 address, u32 oldvalue, u32 value,
                                      int size, int t)
 {
@@ -1076,6 +1077,7 @@ static void debuggerBreakArm(int n, char **args)
            type, address, (u8)oldvalue, (u8)value);
   debugger = true;
 }
+#endif
 
 static void debuggerBreakWriteClear(int n, char **args)
 {
