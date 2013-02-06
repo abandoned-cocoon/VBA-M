@@ -101,7 +101,7 @@ int regaccess(lua_State *L) {
     unsigned int argc = lua_gettop(L), r;
 
     if (argc == 0) {
-        lua_pushstring(L, "reg(n, [value]): needs at least one argument");
+        lua_pushstring(L, "reg(x, [value]): needs at least one argument");
 
     } else if (!lua_isnumber(L, 1) || (r = lua_tonumber(L, 1)) >= 16) {
         lua_pushstring(L, "reg(x): x has to be a number between 0 and 15");
@@ -110,7 +110,7 @@ int regaccess(lua_State *L) {
         lua_pushstring(L, "reg(x, value): value has to be a number");
 
     } else if (argc > 2) {
-        lua_pushstring(L, "reg(n, [value]): too many arguments");
+        lua_pushstring(L, "reg(x, [value]): too many arguments");
 
     } else {
         if (argc == 1) {
@@ -132,7 +132,7 @@ int memaccess(lua_State *L) {
     unsigned int argc = lua_gettop(L);
 
     if (argc == 0) {
-        lua_pushstring(L, "mem(n, [value]): needs at least one argument");
+        lua_pushstring(L, "mem(x, [value]): needs at least one argument");
 
     } else if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "mem(x): x has to be a number");
@@ -141,7 +141,7 @@ int memaccess(lua_State *L) {
         lua_pushstring(L, "mem(x, value): value has to be a number");
 
     } else if (argc > 2) {
-        lua_pushstring(L, "mem(n, [value]): too many arguments");
+        lua_pushstring(L, "mem(x, [value]): too many arguments");
 
     } else {
         unsigned int loc = lua_tonumber(L, 1);
