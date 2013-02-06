@@ -307,6 +307,7 @@ void callback(const char *name, unsigned int args) {
         debugger = true;
 
     } else {
+        if (args) lua_insert(L, -args-1);
         report(L, docall(L, args, 1));
         debugger = lua_toboolean(L, -1);
 
