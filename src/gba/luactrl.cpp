@@ -160,16 +160,14 @@ int memaccess(lua_State *L) {
 
 }
 
-void push_cpu_object(lua_State *L) {
-    #define addfunction(name, func) \
-        lua_pushcfunction(L, func); \
-        lua_setfield(L, -2, name);
+int ip(lua_State *L) {
+    if (lua_gettop(L) != 0) {
+        lua_pushstring(L, "ip(): takes no arguments");
+        return lua_error(L);
+    }
 
-    lua_createtable(L, 0, 2);
-    addfunction("reg",   &(regaccess));
-    addfunction("mem32", &(memaccess<u32>));
-    addfunction("mem16", &(memaccess<u16>));
-    addfunction("mem8",  &(memaccess<u8>));
+    lua_pushinteger(L, reg[15].I - (armState?4:2));
+    return 1;
 }
 
 struct DebuggerCommand {
@@ -250,14 +248,19 @@ void luaInit() {
     luaL_openlibs(L);  /* open libraries */
     lua_gc(L, LUA_GCRESTART, 0);
 
-    push_cpu_object(L);
-    lua_setglobal(L, "cpu");
+    #define addfunction(name, func) \
+        lua_pushcfunction(L, func); \
+        lua_setfield(L, -2, name);
 
-    lua_pushcfunction(L, &oldapi);
-    lua_setglobal(L, "oldapi");
-
-    lua_pushcfunction(L, &emulate);
-    lua_setglobal(L, "emulate");
+    lua_createtable(L, 0, 2);
+    addfunction("ip",      &(ip));
+    addfunction("oldapi",  &(oldapi));
+    addfunction("emulate", &(emulate));
+    addfunction("reg",     &(regaccess));
+    addfunction("mem32",   &(memaccess<u32>));
+    addfunction("mem16",   &(memaccess<u16>));
+    addfunction("mem8",    &(memaccess<u8>));
+    lua_setglobal(L, "gba");
 
     #define PATH_PREPEND(n, p) n"=\""p";\".."n";"
     luaL_dostring(L,
@@ -284,10 +287,13 @@ void luaMain() {
     if(emulator.emuUpdateCPSR)
         emulator.emuUpdateCPSR();
 
-    soundPause();
+    // soundPause();
+    // dofile(L, "pause.lua");
 
-    //dofile(L, "pokemon.lua");
-    printf("\nTry 'cpu.reg(15)' and 'cpu.mem16(0x08000000)'. Pass a second argument to assign. Ctrl+D to resume emulation.\n");
+    puts("");
+    puts("Try 'gba.reg(15)' and 'gba.mem16(0x08000000)'. Assign with 'gba.reg(3, 0xAABBCCDD)'.");
+    puts("Breakpoints are implemented in 'bkpt.lua'. Load with 'require \"bkpt\"'.");
+    puts("For more info read the sourcefile 'luactrl.cpp'. Ctrl+D to resume emulation.");
     TRY("repl:run()")
     debugger = false;
 }
@@ -315,7 +321,7 @@ void luaSignal(int sig, int number) {
         printf("please update luactrl.cpp. Thank you.\n");
         return;
     }
-    printf("Breakpoint %d reached\n", number);
+    //printf("Breakpoint %d reached\n", number);
     callback("breakpoint_cb", 0);
 }
 
