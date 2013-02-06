@@ -34,11 +34,11 @@ function breakpoint_cb()
     bkpts:enable()
 end
 
-function tracepoint_cb(a, b, c, d, e)
+function watchpoint_cb(a, b, c, d, e)
     print("a:", a)
-    print("b:", a)
-    print("c:", a)
-    print("d:", a)
-    print("e:", a)
+    print("b:", b)
+    print("c:", c)
+    print("d:", d)
+    print("e:", e)
     return false
 end
