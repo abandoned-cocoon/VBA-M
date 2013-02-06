@@ -160,6 +160,18 @@ int memaccess(lua_State *L) {
 
 }
 
+void push_cpu_object(lua_State *L) {
+    #define addfunction(name, func) \
+        lua_pushcfunction(L, func); \
+        lua_setfield(L, -2, name);
+
+    lua_createtable(L, 0, 2);
+    addfunction("reg",   &(regaccess));
+    addfunction("mem32", &(memaccess<u32>));
+    addfunction("mem16", &(memaccess<u16>));
+    addfunction("mem8",  &(memaccess<u8>));
+}
+
 struct DebuggerCommand {
   const char *name;
   void (*function)(int,char **);
@@ -198,30 +210,42 @@ int oldapi(lua_State *L) {
     delete[] args;
 }
 
-void push_cpu_object(lua_State *L) {
-    #define addfunction(name, func) \
-        lua_pushcfunction(L, func); \
-        lua_setfield(L, -2, name);
+extern u32 cpuPrefetch[2];
 
-    lua_createtable(L, 0, 2);
-    addfunction("reg",   &(regaccess));
-    addfunction("mem32", &(memaccess<u32>));
-    addfunction("mem16", &(memaccess<u16>));
-    addfunction("mem8",  &(memaccess<u8>));
+void prefetch() {
+
+    if(armState) {
+        cpuPrefetch[0] = memory<u32>(armNextPC);
+        cpuPrefetch[1] = memory<u32>(armNextPC+4);
+
+    } else {
+        cpuPrefetch[0] = memory<u16>(armNextPC);
+        cpuPrefetch[1] = memory<u16>(armNextPC+2);
+
+    }
 }
 
-void luaMain() {
-    if(emulator.emuUpdateCPSR)
-        emulator.emuUpdateCPSR();
+int emulate(lua_State *L) {
+    if (lua_gettop(L) != 1) {
+        lua_pushstring(L, "emulate(steps): needs exactly one argument");
 
-    //debuggerRegisters(0, NULL);
-    while(debugger) {
-        soundPause();
-        // debuggerDisableBreakpoints();
-        debugger = false;
+    } else if (!lua_isnumber(L, 1)) {
+        lua_pushstring(L, "emulate(steps): steps has to be a number");
+
+    } else {
+        prefetch();
+        emulator.emuMain(lua_tonumber(L, 1));
+        return 0;
+
     }
+    return lua_error(L);
 
-    lua_State *L = lua_open();
+}
+
+lua_State *L;
+
+void luaInit() {
+    L = lua_open();
     lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
     luaL_openlibs(L);  /* open libraries */
     lua_gc(L, LUA_GCRESTART, 0);
@@ -232,14 +256,57 @@ void luaMain() {
     lua_pushcfunction(L, &oldapi);
     lua_setglobal(L, "oldapi");
 
-    printf("\nTry 'cpu.reg(15)' and 'cpu.mem16(0x08000000)'. Pass a second argument to assign. Ctrl+D to resume emulation.\n");
+    lua_pushcfunction(L, &emulate);
+    lua_setglobal(L, "emulate");
+
     #define PATH_PREPEND(n, p) n"=\""p";\".."n";"
     luaL_dostring(L,
         PATH_PREPEND("package.path", "./src/lua-repl/?.lua;./src/lua-repl/?/init.lua")
         PATH_PREPEND("package.cpath", "./src/lua-repl/?.so")
     );
-    dofile(L, "src/lua-repl/rep.lua");
+    #define TRY(s) {int status = luaL_dostring(L, s); if (status != LUA_OK) report(L, status);}
+    TRY(
+        "repl = require 'repl.console'\n"
+        "require 'linenoise'\n"
+        "repl:loadplugin 'linenoise'\n"
+        "repl:loadplugin 'history'\n"
+        "repl:loadplugin 'completion'\n"
+        "repl:loadplugin 'autoreturn'\n"
+        "repl:loadplugin 'rcfile'\n"
+    )
+}
+
+void luaQuit() {
     lua_close(L);
+}
+
+void luaMain() {
+    if(emulator.emuUpdateCPSR)
+        emulator.emuUpdateCPSR();
+
+    soundPause();
+
+    //dofile(L, "pokemon.lua");
+    printf("\nTry 'cpu.reg(15)' and 'cpu.mem16(0x08000000)'. Pass a second argument to assign. Ctrl+D to resume emulation.\n");
+    TRY("repl:run()")
+    debugger = false;
+}
+
+void callback(const char *name, unsigned int args) {
+    lua_getglobal(L, name);
+    if (lua_isnil(L, -1)) {
+        // We're kind of stuck, when that happens.
+        // Drop to REPL to let user fix the issue
+        lua_pop(L, args);
+        debugger = true;
+
+    } else {
+        report(L, docall(L, args, 1));
+        debugger = lua_toboolean(L, -1);
+
+    }
+    lua_pop(L, 1);
+    return;
 }
 
 void luaSignal(int sig, int number) {
@@ -249,18 +316,7 @@ void luaSignal(int sig, int number) {
         return;
     }
     printf("Breakpoint %d reached\n", number);
-
-    //debuggerDisableBreakpoints();
-    //debuggerPrefetch();
-    //emulator.emuMain(1);
-    //debuggerEnableBreakpoints(false);
-    return;
-
-/*    bool cond = debuggerCondEvaluate(number & 255);
-    debugger = true;
-    debuggerAtBreakpoint = true;
-    debuggerBreakpointNumber = number;
-    debuggerDisableBreakpoints();*/
+    callback("breakpoint_cb", 0);
 }
 
 void luaOutput(const char *s, u32 addr) {
@@ -271,22 +327,22 @@ void luaOutput(const char *s, u32 addr) {
     puts("");
 }
 
-/*extern*/ void debuggerBreakOnWrite(u32 address, u32 oldvalue, u32 value,
-                                     int size, int t)
-{
-  const char *type = "write";
-  if(t == 2)
-    type = "change";
+void debuggerBreakOnWrite(u32 address, u32 oldvalue, u32 value, int size, int t) {
+    const char *type = t==2?"change":"write";
 
-  if(size == 2)
-    printf("Breakpoint (on %s) address %08x old:%08x new:%08x\n",
-           type, address, oldvalue, value);
-  else if(size == 1)
-    printf("Breakpoint (on %s) address %08x old:%04x new:%04x\n",
-           type, address, (u16)oldvalue,(u16)value);
-  else
-    printf("Breakpoint (on %s) address %08x old:%02x new:%02x\n",
-           type, address, (u8)oldvalue, (u8)value);
-  debugger = true;
+    printf("Breakpoint (on %s) address %08x ", type, address);
+    if(size == 2)
+        printf("old:%08x new:%08x\n", oldvalue, value);
+    else if(size == 1)
+        printf("old:%04x new:%04x\n", (u16)oldvalue,(u16)value);
+    else
+        printf("old:%02x new:%02x\n", (u8)oldvalue, (u8)value);
+
+    lua_pushnumber(L, address);
+    lua_pushnumber(L, oldvalue);
+    lua_pushnumber(L, value);
+    lua_pushnumber(L, size);
+    lua_pushnumber(L, t);
+    callback("watchpoint_cb", 5);
 }
 
