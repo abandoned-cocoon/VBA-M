@@ -79,6 +79,8 @@
 #endif
 
 #ifdef USE_LUACTRL
+extern void luaInit();
+extern void luaQuit();
 extern void luaMain();
 extern void luaSignal(int,int);
 extern void luaOutput(const char *, u32);
@@ -1919,6 +1921,10 @@ int main(int argc, char **argv)
   homeDir = 0;
 #endif
 
+#ifdef USE_LUACTRL
+  luaInit();
+#endif
+
   sdlReadPreferences();
 
   sdlPrintUsage = 0;
@@ -2418,6 +2424,10 @@ int main(int argc, char **argv)
 
 #if WITH_LIRC
   StopLirc();
+#endif
+
+#ifdef USE_LUACTRL
+  luaQuit();
 #endif
 
   SDL_Quit();
