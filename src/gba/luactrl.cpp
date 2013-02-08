@@ -294,8 +294,9 @@ void luaMain() {
     puts("Try 'gba.reg(15)' and 'gba.mem16(0x08000000)'. Assign with 'gba.reg(3, 0xAABBCCDD)'.");
     puts("Breakpoints are implemented in 'bkpt.lua'. Load with 'require \"bkpt\"'.");
     puts("For more info read the sourcefile 'luactrl.cpp'. Ctrl+D to resume emulation.");
-    TRY("repl:run()")
+        TRY("repl:run()")
     debugger = false;
+    prefetch();
 }
 
 void callback(const char *name, unsigned int args) {
@@ -303,17 +304,14 @@ void callback(const char *name, unsigned int args) {
     if (lua_isnil(L, -1)) {
         // We're kind of stuck, when that happens.
         // Drop to REPL to let user fix the issue
-        lua_pop(L, args);
+        lua_pop(L, args+1);
         debugger = true;
 
     } else {
         if (args) lua_insert(L, -args-1);
-        report(L, docall(L, args, 1));
-        debugger = lua_toboolean(L, -1);
-
+        report(L, docall(L, args, 0));
+        debugger = false;
     }
-    lua_pop(L, 1);
-    return;
 }
 
 void luaSignal(int sig, int number) {
@@ -322,7 +320,6 @@ void luaSignal(int sig, int number) {
         printf("please update luactrl.cpp. Thank you.\n");
         return;
     }
-    //printf("Breakpoint %d reached\n", number);
     callback("breakpoint_cb", 0);
 }
 
@@ -335,21 +332,10 @@ void luaOutput(const char *s, u32 addr) {
 }
 
 void debuggerBreakOnWrite(u32 address, u32 oldvalue, u32 value, int size, int t) {
-    const char *type = t==2?"change":"write";
-
-    printf("Breakpoint (on %s) address %08x ", type, address);
-    if(size == 2)
-        printf("old:%08x new:%08x\n", oldvalue, value);
-    else if(size == 1)
-        printf("old:%04x new:%04x\n", (u16)oldvalue,(u16)value);
-    else
-        printf("old:%02x new:%02x\n", (u8)oldvalue, (u8)value);
-
     lua_pushnumber(L, address);
     lua_pushnumber(L, oldvalue);
     lua_pushnumber(L, value);
     lua_pushnumber(L, size);
-    lua_pushnumber(L, t);
-    callback("watchpoint_cb", 5);
+    callback("watchpoint_cb", 4);
 }
 
