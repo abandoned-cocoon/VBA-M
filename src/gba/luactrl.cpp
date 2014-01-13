@@ -1,9 +1,11 @@
 #include <cstdio>
 #include <cstring>
 
+extern "C" {
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
+}
 
 #include "../gba/GBA.h"
 #include "../gba/Sound.h"
@@ -265,7 +267,7 @@ void luaInit() {
     #define PATH_PREPEND(n, p) n"=\""p";\".."n";"
     luaL_dostring(L,
         PATH_PREPEND("package.path", "./src/lua-repl/?.lua;./src/lua-repl/?/init.lua")
-        PATH_PREPEND("package.cpath", "./src/lua-repl/?.so")
+        PATH_PREPEND("package.cpath", "./src/lua-linenoise/?.so")
     );
     #define TRY(s) {int status = luaL_dostring(L, s); if (status != LUA_OK) report(L, status);}
     TRY(
