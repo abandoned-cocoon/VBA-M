@@ -4,7 +4,7 @@
 // Author:      Uknown ? (found at http://wiki.wxwidgets.org/wiki.pl?WxListCtrl)
 // Modified by: Francesco Montorsi
 // Created:     2005/06/29
-// RCS-ID:      $Id$
+// RCS-ID:      $Id: checkedlistctrl.cpp 1049 2011-12-04 15:14:43Z bgk $
 // Copyright:   (c) 2005 Francesco Montorsi
 // Licence:     wxWidgets licence
 /////////////////////////////////////////////////////////////////////////////

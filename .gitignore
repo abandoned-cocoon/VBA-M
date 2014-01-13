@@ -1,0 +1,76 @@
+# Some (probably) Xcode specific stuff
+Debug/
+VBA-M.build/
+VBA-M.xcodeproj/
+gvbam.app/
+
+# Weird CMake stuff
+CMakeScripts/*.make*
+
+# Added by gemignore. Snippet 'CMake'
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+install_manifest.txt
+
+
+# Added by gemignore. Snippet 'Global/OSX'
+.DS_Store
+
+# Thumbnails
+._*
+
+# Files that might appear on external disk
+.Spotlight-V100
+.Trashes
+
+
+# Added by gemignore. Snippet 'Global/Linux'
+.*
+!.gitignore
+*~
+
+# KDE
+.directory
+
+
+# Added by gemignore. Snippet 'Global/Windows'
+# Windows image file caches
+Thumbs.db
+
+# Folder config file
+Desktop.ini
+
+
+# Added by gemignore. Snippet 'C++'
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+
+# Added by gemignore. Snippet 'Objective-C'
+# Xcode
+build/*
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+*.xcworkspace
+!default.xcworkspace
+xcuserdata
+profile
+*.moved-aside
