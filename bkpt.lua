@@ -18,6 +18,7 @@ function bkpts:disable()
 end
 
 function breakpoint_cb()
+    -- called by the emulator
     loc = gba.ip()
     r = bkpts.callback[loc]
     if r == nil then
