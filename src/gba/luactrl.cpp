@@ -266,8 +266,8 @@ void luaInit() {
 
     #define PATH_PREPEND(n, p) n"=\""p";\".."n";"
     luaL_dostring(L,
-        PATH_PREPEND("package.path", "./src/lua-repl/?.lua;./src/lua-repl/?/init.lua")
-        PATH_PREPEND("package.cpath", "./src/lua-linenoise/?.so")
+        PATH_PREPEND("package.path",  LUAPREFIX "/?.lua;" LUAPREFIX "/?/init.lua")
+        PATH_PREPEND("package.cpath", LUAPREFIX "/liblua?.so")
     );
     #define TRY(s) {int status = luaL_dostring(L, s); if (status != LUA_OK) report(L, status);}
     TRY(
