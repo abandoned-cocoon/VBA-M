@@ -501,4 +501,24 @@ if( ENABLE_LUACTRL )
 
     ADD_DEFINITIONS( -DUSE_LUACTRL )
 
+    ADD_CUSTOM_COMMAND (
+        OUTPUT ./src/LuaBitOp-1.0.2/bit.so
+        COMMAND make
+        WORKING_DIRECTORY ./src/LuaBitOp-1.0.2/
+        )
+
+    ADD_CUSTOM_COMMAND (
+        OUTPUT ./src/lua-linenoise/linenoise.so
+        COMMAND make
+        WORKING_DIRECTORY ./src/lua-linenoise/
+        )
+
+    ADD_CUSTOM_TARGET (lua_modules
+        DEPENDS
+            ./src/LuaBitOp-1.0.2/bit.so
+            ./src/lua-linenoise/linenoise.so
+        )
+
+    ADD_DEPENDENCIES (vbam lua_modules)
+
 endif( ENABLE_LUACTRL )
