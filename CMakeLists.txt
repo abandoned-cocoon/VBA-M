@@ -364,6 +364,15 @@ if( ENABLE_LUACTRL )
     )
 endif( ENABLE_LUACTRL )
 
+SET(SRC_LUA_LINENOISE
+    src/lua-linenoise/linenoise.c
+    src/lua-linenoise/linenoiselib.c
+)
+
+SET(SRC_LUA_BITOP
+    src/LuaBitOp-1.0.2/bit.c
+)
+
 INCLUDE_DIRECTORIES(
     ${ZLIB_INCLUDE_DIR}
     fex
@@ -380,12 +389,12 @@ IF( ENABLE_GTK )
         ${GTKGLMM_INCLUDE_DIRS}
     )
 
-    LINK_DIRECTORIES(
-        ${GLIBMM_LIBRARY_DIRS}
-        ${GIOMM_LIBRARY_DIRS}
-        ${GTKMM_LIBRARY_DIRS}
-        ${GTKGLMM_LIBRARY_DIRS}
-    )
+    #LINK_DIRECTORIES(
+    #    ${GLIBMM_LIBRARY_DIRS}
+    #    ${GIOMM_LIBRARY_DIRS}
+    #    ${GTKMM_LIBRARY_DIRS}
+    #    ${GTKGLMM_LIBRARY_DIRS}
+    #)
 ENDIF( ENABLE_GTK )
 
 IF( ENABLE_FFMPEG )
@@ -451,8 +460,11 @@ IF( ENABLE_GTK )
     TARGET_LINK_LIBRARIES (
         gvbam
         ${VBAMCORE_LIBS}
-        ${GTKMM_LIBRARIES}
+        ${GDKMM_LIBRARIES}
+        ${GIOMM_LIBRARIES}
+        ${GLIBMM_LIBRARIES}
         ${GTKGLMM_LIBRARIES}
+        ${GTKMM_LIBRARIES}
     )
 
     INSTALL(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gvbam DESTINATION bin)
@@ -479,6 +491,11 @@ if( ENABLE_GTK OR ENABLE_WX )
     endif( ENABLE_NLS )
 endif( ENABLE_GTK OR ENABLE_WX )
 
+ADD_LIBRARY (lua_linenoise MODULE EXCLUDE_FROM_ALL ${SRC_LUA_LINENOISE})
+ADD_LIBRARY (lua_bitop     MODULE EXCLUDE_FROM_ALL ${SRC_LUA_BITOP})
+SET_TARGET_PROPERTIES (lua_linenoise PROPERTIES OUTPUT_NAME lualinenoise)
+SET_TARGET_PROPERTIES (lua_bitop     PROPERTIES OUTPUT_NAME luabit)
+
 if( ENABLE_LUACTRL )
 
     # TODO: Link statically
@@ -490,9 +507,9 @@ if( ENABLE_LUACTRL )
         ${LUA51_INCLUDE_DIRS}
     )
 
-    LINK_DIRECTORIES(
-        ${LUA51_LIBRARY_DIRS}
-    )
+    #LINK_DIRECTORIES(
+    #    ${LUA51_LIBRARY_DIRS}
+    #)
 
     TARGET_LINK_LIBRARIES (
         vbam
@@ -500,25 +517,8 @@ if( ENABLE_LUACTRL )
     )
 
     ADD_DEFINITIONS( -DUSE_LUACTRL )
+    SET_SOURCE_FILES_PROPERTIES(src/gba/luactrl.cpp PROPERTIES COMPILE_DEFINITIONS LUAPREFIX="${CMAKE_BINARY_DIR}")
 
-    ADD_CUSTOM_COMMAND (
-        OUTPUT ./src/LuaBitOp-1.0.2/bit.so
-        COMMAND make
-        WORKING_DIRECTORY ./src/LuaBitOp-1.0.2/
-        )
-
-    ADD_CUSTOM_COMMAND (
-        OUTPUT ./src/lua-linenoise/linenoise.so
-        COMMAND make
-        WORKING_DIRECTORY ./src/lua-linenoise/
-        )
-
-    ADD_CUSTOM_TARGET (lua_modules
-        DEPENDS
-            ./src/LuaBitOp-1.0.2/bit.so
-            ./src/lua-linenoise/linenoise.so
-        )
-
-    ADD_DEPENDENCIES (vbam lua_modules)
+    ADD_DEPENDENCIES (vbam lua_linenoise lua_bitop)
 
 endif( ENABLE_LUACTRL )
