@@ -1,4 +1,4 @@
--- Copyright (c) 2011-2012 Rob Hoelz <rob@hoelz.ro>
+-- Copyright (c) 2011-2013 Rob Hoelz <rob@hoelz.ro>
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy of
 -- this software and associated documentation files (the "Software"), to deal in
@@ -21,7 +21,7 @@
 
 local plugins_lookup_meta = { __mode = 'k' }
 
-local repl         = { _buffer = '', _plugins = setmetatable({}, plugins_lookup_meta), _features = {}, _ifplugin = {}, VERSION = 0.3 }
+local repl         = { _buffer = '', _plugins = setmetatable({}, plugins_lookup_meta), _features = {}, _ifplugin = {}, VERSION = 0.4 }
 local select       = select
 local loadstring   = loadstring
 local dtraceback   = debug.traceback
