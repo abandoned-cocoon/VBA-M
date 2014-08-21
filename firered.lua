@@ -1,10 +1,11 @@
 require "bkpt"
 require "stack"
+bit = require "bit"
 snapshot = require "snapshot"
 
 local gpu_alloc_log_cached = 0
 
-local log__battle_dp15 = 1
+local log__battle_dp15 = 0
 local log__gpu_transfers = 0
 local log__gpu_allocations = 0
 local log__script_exec = 0
@@ -124,6 +125,36 @@ local h__task_exec = function()
 	task_enter_sp = gba.reg(13)
 end
 
+local h__navigation_diagonal = function()
+	local directionbits = bit.rshift(gba.mem8(gba.reg(4)), 4)
+	local directioncodes = {0, 4, 3, 8,
+	                        2, 5, 6, 0,
+	                        1, 0, 1, 1,
+	                        7, 4, 3, 0}
+	local directioncode = 0
+
+	if directionbits >= 16 then
+		directioncode = 0
+	else
+		directioncode = directioncodes[directionbits+1]
+	end
+
+	-- print(string.format("%02x %02x", directionbits, directioncode))
+	gba.mem8(gba.reg(5)+2, directioncode)
+	gba.reg(15, 0x806CA3E)
+end
+
+local h__call_by_verify = function()
+	local regnum = (gba.ip()-0x081E3BA8) / 4
+	local target = gba.reg(regnum)
+	local targetregion = bit.rshift(target, 24)
+	local invalid = (targetregion ~= 0x08 and targetregion ~= 0x02 and targetregion ~= 0x03)
+	if invalid then
+		print(string.format("%04d bx/r%d invalid target %08x", snapshot:make(), regnum, target))
+		repl:run()
+	end
+end
+
 table.insert(snapshot.plugins, function()
 	if task_current_index == 0xFF then return {} end
 	return {string.format("%08x during execution of task #%d: %08x", task_enter_sp, task_current_index, task_current_func)}
@@ -145,5 +176,26 @@ bkpts:add(0x08077436, h__task_add)
 bkpts:add(0x08077508, h__task_del)
 bkpts:add(0x08077590, h__task_exec)
 bkpts:add(0x0807759C, h__task_exec)
+
+bkpts:add(0x0806CA04, h__navigation_diagonal)
+
+bkpts:add(0x081E3BA8, h__call_by_verify)
+bkpts:add(0x081E3BAC, h__call_by_verify)
+bkpts:add(0x081E3BB0, h__call_by_verify)
+bkpts:add(0x081E3BB4, h__call_by_verify)
+
+bkpts:add(0x081E3BB8, h__call_by_verify)
+bkpts:add(0x081E3BBC, h__call_by_verify)
+bkpts:add(0x081E3BC0, h__call_by_verify)
+bkpts:add(0x081E3BC4, h__call_by_verify)
+
+bkpts:add(0x081E3BC8, h__call_by_verify)
+bkpts:add(0x081E3BCC, h__call_by_verify)
+bkpts:add(0x081E3BD0, h__call_by_verify)
+bkpts:add(0x081E3BD4, h__call_by_verify)
+
+bkpts:add(0x081E3BD8, h__call_by_verify)
+bkpts:add(0x081E3BDC, h__call_by_verify)
+bkpts:add(0x081E3BE0, h__call_by_verify)
 
 bkpts:enable()
