@@ -141,13 +141,16 @@ local player_npc = function()
 end
 
 local h__navigation_direction_sidechannel_in = function()
-	gba.mem8(player_npc()+0x23, gba.reg(0))
+	gba.mem8(player_npc()+0x23, gba.mem8(gba.reg(6)+2))
 end
 
 local h__navigation_direction_sidechannel_out = function()
 	local npc = gba.reg(0)
 	if npc == player_npc() then
-		gba.reg(2, gba.mem8(npc+0x23))
+		local override = gba.mem8(npc+0x23)
+		if override > 0 then
+			gba.reg(2, override)
+		end
 	end
 end
 
@@ -227,9 +230,8 @@ bkpts:add(0x08077508, h__task_del)
 bkpts:add(0x08077590, h__task_exec)
 bkpts:add(0x0807759C, h__task_exec)
 
-bkpts:add(0x0805B4D4, h__navigation_direction_sidechannel_in)
--- looking states have no useful direction information because no button is pressed
--- bkpts:add(0x080645F4, h__navigation_direction_sidechannel_out)
+bkpts:add(0x08056480, h__navigation_direction_sidechannel_in)
+bkpts:add(0x080645F4, h__navigation_direction_sidechannel_out)
 bkpts:add(0x08064904, h__navigation_direction_sidechannel_out)
 bkpts:add(0x08064830, h__navigation_direction_sidechannel_out)
 bkpts:add(0x08064BD8, h__navigation_direction_sidechannel_out)
