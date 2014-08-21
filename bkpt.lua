@@ -46,7 +46,6 @@ function add_tracepoint(addr, msg, reg)
     end
     function traceprint()
         print(string.format("%s %08x", msg, gba.reg(reg)))
-        printtrace()
     end
     table.insert(bkpts.inactive, addr)
     bkpts.callback[addr] = traceprint
