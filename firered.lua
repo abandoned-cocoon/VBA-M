@@ -144,15 +144,20 @@ local h__navigation_direction_sidechannel_in = function()
 	gba.mem8(player_npc()+0x23, gba.mem8(gba.reg(6)+2))
 end
 
-local h__navigation_direction_sidechannel_out = function()
-	local npc = gba.reg(0)
-	if npc == player_npc() then
-		local override = gba.mem8(npc+0x23)
-		if override > 0 then
-			gba.reg(2, override)
+local gen_h__navigation_direction_sidechannel_out = function(reg1, reg2)
+	return function()
+		local npc = gba.reg(reg2)
+		if npc == player_npc() then
+			local override = gba.mem8(npc+0x23)
+			if override > 0 then
+				gba.reg(reg1, override)
+			end
 		end
 	end
 end
+
+h__navigation_direction_sidechannel_out   = gen_h__navigation_direction_sidechannel_out(2, 0)
+h__navigation_direction_sidechannel_out_0 = gen_h__navigation_direction_sidechannel_out(0, 4)
 
 local t__navigation_diagonal = function()
 	local table_copy_and_extend = function(ptr, padding)
@@ -175,20 +180,12 @@ local t__navigation_diagonal = function()
 end
 
 local h__navigation_diagonal = function()
-	local directionbits = bit.rshift(gba.mem8(gba.reg(4)), 4)
+	local directionbits = bit.band(15, bit.rshift(gba.mem8(gba.reg(4)), 4))
 	local directioncodes = {0, 4, 3, 0,
 	                        2, 8, 7, 2,
 	                        1, 6, 5, 1,
 	                        0, 4, 3, 0}
-	local directioncode = 0
-
-	if directionbits >= 16 then
-		directioncode = 0
-	else
-		directioncode = directioncodes[directionbits+1]
-	end
-
-	-- print(string.format("%02x %02x", directionbits, directioncode))
+	local directioncode = directioncodes[directionbits+1]
 	gba.mem8(gba.reg(5)+2, directioncode)
 	gba.reg(15, 0x806CA3E)
 end
@@ -237,6 +234,8 @@ bkpts:add(0x08064830, h__navigation_direction_sidechannel_out)
 bkpts:add(0x08064BD8, h__navigation_direction_sidechannel_out)
 bkpts:add(0x08064EF8, h__navigation_direction_sidechannel_out)
 bkpts:add(0x080646FC, h__navigation_direction_sidechannel_out)
+bkpts:add(0x08063440, h__navigation_direction_sidechannel_out_0)
+bkpts:add(0x080656C4, h__navigation_direction_sidechannel_out)
 bkpts:add(0x0806CA04, h__navigation_diagonal)
 
 bkpts:add(0x081E3BA8, h__call_by_verify)
