@@ -373,6 +373,14 @@ SET(SRC_LUA_BITOP
     src/LuaBitOp-1.0.2/bit.c
 )
 
+SET(SRC_LUA_COPY
+    src/lua-repl/repl
+    bkpt.lua
+    firered.lua
+    snapshot.lua
+    stack.lua
+)
+
 INCLUDE_DIRECTORIES(
     ${ZLIB_INCLUDE_DIR}
     fex
@@ -508,7 +516,7 @@ if( ENABLE_LUACTRL )
     ADD_DEFINITIONS ( -DUSE_LUACTRL )
     SET_SOURCE_FILES_PROPERTIES(src/gba/luactrl.cpp PROPERTIES COMPILE_DEFINITIONS LUAPREFIX="${CMAKE_BINARY_DIR}")
 
-    FILE(COPY ${CMAKE_SOURCE_DIR}/src/lua-repl/repl DESTINATION ${CMAKE_BINARY_DIR}/)
+    FILE(COPY ${SRC_LUA_COPY} DESTINATION ${CMAKE_BINARY_DIR}/)
 
     ADD_DEPENDENCIES (vbam lua_linenoise lua_bitop)
 
