@@ -11,6 +11,13 @@ local log__gpu_allocations = 0
 local log__script_exec = 0
 local log__task = 0
 
+local freespace = 0x0871B1C8
+
+local malloc = function(bytes)
+	freespace = freespace + bytes
+	return freespace - bytes
+end
+
 local h__battle_dp15_trace = function ()
 	if log__battle_dp15 == 0 then return end
 
@@ -125,12 +132,51 @@ local h__task_exec = function()
 	task_enter_sp = gba.reg(13)
 end
 
+local p__walkrun = 0x02037078
+local p__npc_states = 0x02036E38
+
+local player_npc = function()
+	local npcid = gba.mem8(p__walkrun+5)
+	return p__npc_states + 0x24 * npcid
+end
+
+local h__navigation_direction_sidechannel_in = function()
+	gba.mem8(player_npc()+0x23, gba.reg(0))
+end
+
+local h__navigation_direction_sidechannel_out = function()
+	local npc = gba.reg(0)
+	if npc == player_npc() then
+		gba.reg(2, gba.mem8(npc+0x23))
+	end
+end
+
+local t__navigation_diagonal = function()
+	local table_copy_and_extend = function(ptr, padding)
+		local from = gba.mem32(ptr)
+		local to = malloc(32)
+		gba.mem32(ptr, to)
+		gba.mem32(to+ 0, gba.mem32(from+ 0))
+		gba.mem32(to+ 4, gba.mem32(from+ 4))
+		gba.mem32(to+ 8, gba.mem32(from+ 8))
+		gba.mem32(to+12, gba.mem32(from+12))
+		gba.mem32(to+16, padding)
+		gba.mem32(to+20, padding)
+		gba.mem32(to+24, padding)
+		gba.mem32(to+28, padding)
+	end
+	local ret0 = 0x0805A0ED
+	table_copy_and_extend(0x080638F4, ret0)
+	table_copy_and_extend(0x080638F8, ret0)
+	table_copy_and_extend(0x0805C4F0, ret0)
+end
+
 local h__navigation_diagonal = function()
 	local directionbits = bit.rshift(gba.mem8(gba.reg(4)), 4)
-	local directioncodes = {0, 4, 3, 8,
-	                        2, 5, 6, 0,
-	                        1, 0, 1, 1,
-	                        7, 4, 3, 0}
+	local directioncodes = {0, 4, 3, 0,
+	                        2, 8, 7, 2,
+	                        1, 6, 5, 1,
+	                        0, 4, 3, 0}
 	local directioncode = 0
 
 	if directionbits >= 16 then
@@ -160,6 +206,10 @@ table.insert(snapshot.plugins, function()
 	return {string.format("%08x during execution of task #%d: %08x", task_enter_sp, task_current_index, task_current_func)}
 end)
 
+patch_all = function()
+	t__navigation_diagonal()
+end
+
 bkpts:add(0x080C70D0, h__battle_dp15_trace)
 
 bkpts:add(0x080088F0, h__gpu_pal_allocator_reset)
@@ -177,6 +227,14 @@ bkpts:add(0x08077508, h__task_del)
 bkpts:add(0x08077590, h__task_exec)
 bkpts:add(0x0807759C, h__task_exec)
 
+bkpts:add(0x0805B4D4, h__navigation_direction_sidechannel_in)
+-- looking states have no useful direction information because no button is pressed
+-- bkpts:add(0x080645F4, h__navigation_direction_sidechannel_out)
+bkpts:add(0x08064904, h__navigation_direction_sidechannel_out)
+bkpts:add(0x08064830, h__navigation_direction_sidechannel_out)
+bkpts:add(0x08064BD8, h__navigation_direction_sidechannel_out)
+bkpts:add(0x08064EF8, h__navigation_direction_sidechannel_out)
+bkpts:add(0x080646FC, h__navigation_direction_sidechannel_out)
 bkpts:add(0x0806CA04, h__navigation_diagonal)
 
 bkpts:add(0x081E3BA8, h__call_by_verify)
@@ -199,3 +257,5 @@ bkpts:add(0x081E3BDC, h__call_by_verify)
 bkpts:add(0x081E3BE0, h__call_by_verify)
 
 bkpts:enable()
+
+patch_all()
