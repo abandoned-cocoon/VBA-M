@@ -1,9 +1,9 @@
 VBA-M
 ==========
 
-A **VBA-M** fork with lua-scripting support
+A [VBA-M](https://github.com/x3ro/VBA-M) fork with lua-scripting support
 
-#How to install
+##How to install
 
 To enable lua scripting support you have to compile it with the `ENABLE_LUACTRL` option.
 
@@ -12,7 +12,7 @@ cmake -DENABLE_LUACTRL=ON .
 make
 ```
 
-#How to run
+##How to run
 
 To try the project you need to have a .gba rom file for the game you are going to test. For this example let's say you have the Pokemon FireRed rom.
 
