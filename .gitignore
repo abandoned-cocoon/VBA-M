@@ -74,3 +74,13 @@ build/*
 xcuserdata
 profile
 *.moved-aside
+
+# Compiled .gmo files
+*.gmo
+
+# Output binaries
+vbam
+gvbam
+
+# Copied repl folder
+/repl/
