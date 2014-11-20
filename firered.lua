@@ -10,6 +10,7 @@ local log__gpu_transfers = 0
 local log__gpu_allocations = 0
 local log__script_exec = 0
 local log__task = 0
+local log__obj = 1
 
 local freespace = 0x0871B1C8
 
@@ -127,9 +128,38 @@ local task_current_func = 0xFF
 local task_enter_sp = 0
 
 local h__task_exec = function()
-	task_current_index = gba.reg(0)
-	task_current_func  = gba.mem32(gba.reg(4))
-	task_enter_sp = gba.reg(13)
+	if gba.ip() == 0x08077590 then -- enter
+		task_current_index = gba.reg(0)
+		task_current_func  = gba.mem32(gba.reg(4))
+		task_enter_sp = gba.reg(13)
+	else -- leave
+		task_current_index = 0xFF
+		task_current_func  = 0
+		task_enter_sp = 0
+	end
+end
+
+local obj_current_index = 0xFF
+local obj_current_func = 0
+local obj_enter_sp = 0
+
+local h__obj_add = function()
+	if log__obj == 0 then return end
+
+	print(string.format("%04d obj/add [#%02x] func=%08x", snapshot:make(),
+		gba.reg(7), gba.reg(0)))
+end
+
+local h__obj_exec = function()
+	if gba.ip() == 0x08006B7C then
+		obj_current_index = (gba.reg(4) - 0x0202063C) / 0x44
+		obj_current_func = gba.reg(1)
+		obj_enter_sp = gba.reg(13)
+	else
+		obj_current_index = 0xFF
+		obj_current_func = 0
+		obj_enter_sp = 0
+	end
 end
 
 local p__walkrun = 0x02037078
@@ -206,6 +236,15 @@ table.insert(snapshot.plugins, function()
 	return {string.format("%08x during execution of task #%d: %08x", task_enter_sp, task_current_index, task_current_func)}
 end)
 
+table.insert(snapshot.plugins, function()
+	if obj_current_func == 0 then return {} end
+	return {string.format("%08x during execution of obj #%d: %08x",
+		obj_enter_sp,
+		obj_current_index,
+		obj_current_func
+	)}
+end)
+
 patch_all = function()
 	t__navigation_diagonal()
 end
@@ -224,8 +263,12 @@ bkpts:add(0x080703EC, h__gpu_pal_apply)
 
 bkpts:add(0x08077436, h__task_add)
 bkpts:add(0x08077508, h__task_del)
-bkpts:add(0x08077590, h__task_exec)
-bkpts:add(0x0807759C, h__task_exec)
+bkpts:add(0x08077590, h__task_exec) -- enter task
+bkpts:add(0x0807759C, h__task_exec) -- leave task
+
+bkpts:add(0x0800710C, h__obj_add)
+bkpts:add(0x08006B7C, h__obj_exec) -- enter obj
+bkpts:add(0x08006B9C, h__obj_exec) -- leave obj
 
 bkpts:add(0x08056480, h__navigation_direction_sidechannel_in)
 bkpts:add(0x080645F4, h__navigation_direction_sidechannel_out)
